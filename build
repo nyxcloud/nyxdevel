@@ -1,0 +1,56 @@
+#!/usr/bin/env ruby
+
+require 'optparse'
+
+
+begin
+  OptionParser.new do |parser|
+
+    parser.banner = "Usage: ci/build.rb [OPTIONS] [TARGET]"
+
+    parser.on("-h", "--help", "Print help") do
+      puts parser
+      exit 1
+    end
+
+  end.parse!
+rescue RuntimeError => err
+  STDERR.puts err
+  exit 1
+end
+
+
+make_target =
+  case ARGV.length()
+  when 0
+    "all"
+  when 1
+    ARGV.pop()
+  else
+    STDERR.puts "Error: Only one argument expected"
+    exit 1
+  end
+
+
+
+Dir.chdir "#{File.dirname(__FILE__)}/../" do
+
+  if not Dir.exist? "build"
+    STDERR.puts "Error: Missing build directory, try running ci/setup.rb"
+  end
+
+  Dir.chdir "build" do
+
+    if not File.exist? "Makefile"
+      STDERR.puts "Error: Missing Makefile in build directory"
+      exit 1
+    end
+
+    if not system "make -j #{make_target}"
+      STDERR.puts "Make failed"
+      exit 1
+    end
+
+  end
+
+end

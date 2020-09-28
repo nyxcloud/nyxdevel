@@ -1,0 +1,87 @@
+#!/usr/bin/env ruby
+
+require 'optparse'
+require 'fileutils'
+
+opts =
+  {
+    :generator => "Unix Makefiles",
+    :build_type => "Release",
+    :clean=> false,
+    :cmake_opts => {}
+  }
+
+begin
+  OptionParser.new do |parser|
+    
+    parser.banner = "Usage: ci/setup.rb [OPTIONS]"
+
+    parser.on("-h", "--help", "Print help") do
+      puts parser
+      exit 1
+    end
+
+    parser.on("--xcode", "Generate XCode Project instead of Makefiles") do
+      opts[:generator] = "Xcode"
+      opts[:cmake_opts]['CMAKE_OSX_ARCHITECTURES'] = "x86_64"
+    end
+
+    parser.on("--debug", "Build debug version") do
+      opts[:build_type] = "Debug"
+    end
+
+    parser.on("--clean", "Do a clean build") do
+      opts[:clean] = true
+    end
+
+  end.parse!
+
+  raise "Unexpected argument(s): #{ARGV.join(' ')}" unless ARGV.empty?
+
+rescue RuntimeError => err
+  STDERR.puts err
+  exit 1
+end
+
+
+def status(message)
+  puts "===[ #{message} ]==="
+end
+
+
+Dir.chdir "#{File.dirname(__FILE__)}/../" do
+
+  status "CMake Setup BEGIN"
+
+  if not Dir.exist? "build"
+    Dir.mkdir "build"
+  elsif opts[:clean]
+    FileUtils.rm_rf "build"
+    Dir.mkdir "build"
+  end
+
+  Dir.chdir "build" do
+
+    cmake_cmd = "cmake -G '#{opts[:generator]}'"
+
+    if not opts[:generator] == "Xcode"
+      cmake_cmd += " -DCMAKE_BUILD_TYPE='#{opts[:build_type]}'"
+    end
+
+    opts[:cmake_opts].each do |name,value|
+      cmake_cmd += " '-D#{name}=#{value}'"
+    end
+
+    cmake_cmd += " ../code ."
+
+    puts "+ #{cmake_cmd}"
+
+    if not system cmake_cmd
+      status "CMake Setup FAILED"
+      exit 1
+    end
+  end
+
+  status "CMake Setup COMPLETE"
+
+end
