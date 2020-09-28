@@ -6,6 +6,7 @@ require 'fileutils'
 opts =
   {
     :generator => "Unix Makefiles",
+    :build_dir => "build",
     :build_type => "Release",
     :clean=> false,
     :cmake_opts => {}
@@ -23,6 +24,7 @@ begin
 
     parser.on("--xcode", "Generate XCode Project instead of Makefiles") do
       opts[:generator] = "Xcode"
+      opts[:build_dir] = "build_xcode"
       opts[:cmake_opts]['CMAKE_OSX_ARCHITECTURES'] = "x86_64"
     end
 
@@ -53,14 +55,14 @@ Dir.chdir "#{File.dirname(__FILE__)}/../" do
 
   status "CMake Setup BEGIN"
 
-  if not Dir.exist? "build"
-    Dir.mkdir "build"
+  if not Dir.exist? opts[:build_dir]
+    Dir.mkdir opts[:build_dir]
   elsif opts[:clean]
-    FileUtils.rm_rf "build"
-    Dir.mkdir "build"
+    FileUtils.rm_rf opts[:build_dir]
+    Dir.mkdir opts[:build_dir]
   end
 
-  Dir.chdir "build" do
+  Dir.chdir opts[:build_dir] do
 
     cmake_cmd = "cmake -G '#{opts[:generator]}'"
 
